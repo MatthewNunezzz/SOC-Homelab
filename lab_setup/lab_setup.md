@@ -1,4 +1,4 @@
-# Build Ubuntu Server VM:
+# Build Wazuh Server VM:
 
 ## Download Ubuntu Server
 1. Get Ubuntu Server 24.04 LTS from: https://ubuntu.com/download/server
@@ -125,23 +125,15 @@ network:
 - Save (Ctrl+X, Y, Enter) and apply:
 - Run `sudo netplan try`
 
-Checkpoint-----------------------
-
 ## Download Wazuh agent on DC
-On your Windows Server 2022 DC:
-1. Open browser and go to: https://192.168.10.100
-2. Login to Wazuh Dashboard
-3. Click hamburger menu (☰) → Server management → Endpoints summary
-4. Click Deploy new agent
-5. Configure:
-    - Operating system: Windows
-    - Server address: 192.168.10.100
-    - Agent name: DC01 (or your preference)
-6. Copy the PowerShell command shown
+On your host machine:
+1. Navigate to https://documentation.wazuh.com/4.9/installation-guide/wazuh-agent/wazuh-agent-package-windows.html
+2. Download wazuh agent for windows (Ensure agent version is compatible with wazuh manager version)
+3. Copy/Paste downloaded file over to DC VM in the desktop folder (must be running enhanced session)
 
 ## Install Wazuh agent on DC
 Run powershell as administrator on DC
-1. Execute copied powershell command
+1. Run `msiexec.exe /i C:\Users\Administrator\Desktop\wazuh-agent-4.9.2-1.msi /q WAZUH_MANAGER="172.16.0.6"`
 2. Start the agent `NET START WazuhSvc`
 
 ## Verify Agent connection
@@ -153,3 +145,9 @@ Check logs are flowing:
 1. Click on agent name
 2. Click Security events tab
 3. You should start seeing Windows Event logs appearing
+
+---
+
+# Build Kali Linux (Attacker) VM
+
+## 
