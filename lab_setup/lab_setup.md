@@ -388,6 +388,19 @@ Find the `ossec_config` section and add this before the closing tag:
   </localfile>
 ```
 Save and Exit
+
+To ensure that suricata alerts get mapped to Level 3 (show up in wazuh dashboard),
+Run `sudo nano /var/ossec/etc/rules/local_rules.xml` and add to it:
+```xml
+<group name="suricata,">
+  <rule id="86601" level="3" overwrite="yes">
+    <if_sid>86600</if_sid>
+    <field name="event_type">^alert$</field>
+    <description>Suricata: Alert - $(alert.signature)</description>
+  </rule>
+</group>
+```
+Save and Exit
 ```bash
 # Restart Wazuh agent to apply changes
 sudo systemctl restart wazuh-manager
@@ -395,3 +408,32 @@ sudo systemctl restart wazuh-manager
 # Check Wazuh agent status
 sudo systemctl status wazuh-manager
 ```
+9. Check Suricata Alerts in Wazuh Dashboard:
+- In dashboard search for: `rule.groups:suricata` or `data.event_type:alert`
+- You should start seeing Suricata alerts integrated with Wazuh
+
+---
+
+# Install Nessus (Vulnerability Scanner) on Host Machine:
+
+On your Windows 11 laptop:
+
+1. Register for Nessus Essentials:
+- Go to: https://www.tenable.com/products/nessus/nessus-essentials
+- Register with your email
+- You'll receive an activation code
+
+2. Download Nessus:
+- Download Nessus for Windows from the email link
+- Run the installer (Nessus-10.x.x-x64.msi)
+
+3. Initial Setup:
+- Open browser: https://localhost:8834
+- Accept the certificate warning
+- Select "Nessus Essentials"
+- Enter your activation code
+- Create admin username/password (SAVE THESE!)
+- Wait for plugins to download (15-20 minutes)
+
+4. Configure for Internal Network:
+- Once loaded, you're ready to scan 172.16.0.2
