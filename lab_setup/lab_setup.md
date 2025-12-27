@@ -109,6 +109,7 @@ Once booted, reconfigure the static IP:
 sudo nano /etc/netplan/50-cloud-init.yaml
 ```
 - Change it to:
+```bash
 network:
   version: 2
   ethernets:
@@ -122,6 +123,7 @@ network:
       nameservers:
         addresses:
           - 172.16.0.2
+```
 - Save (Ctrl+X, Y, Enter) and apply:
 - Run `sudo netplan try`
 
@@ -150,4 +152,246 @@ Check logs are flowing:
 
 # Build Kali Linux (Attacker) VM
 
-## 
+## Install Pre-built Kali Linux VM
+
+1. Go to: https://www.kali.org/get-kali/#kali-virtual-machines
+2. Download Kali Linux Hyper-V 64-bit (approximately 3-4 GB)
+3. Extract the ZIP file
+4. Install the VM by double-clicking "install-vm.bat" script
+5. Configure VM settings: 
+  - Set RAM to 2 GB
+  - 2 virtual processors
+  - Set network adapter to Internal switch
+6. Default credentials for pre-built VM: 
+  - Username: `kali`
+  - Password: `kali`
+
+## Update Kali and Install Tools
+```bash
+# Update and install tools
+
+# Update system
+sudo apt update && sudo apt upgrade -y
+
+# Install additional useful tools
+sudo apt install -y \
+  crackmapexec \
+  evil-winrm \
+  impacket-scripts \
+  enum4linux \
+  smbclient \
+  hydra \
+  metasploit-framework \
+  powershell-empire \
+  bloodhound \
+  responder \
+  mimikatz \
+  chisel
+
+# Initialize Metasploit database
+sudo msfdb init
+
+```
+
+## Configure Kali Network settings
+In Hyper-V Manager
+- Configure Kali VM network adpater to Internal Switch
+- Start Kali Linux VM
+
+In Kali linux VM
+- Open terminal
+- Edit network configuration: `sudo nano /etc/network/interfaces`
+```bash
+# Add to file ...
+# Internal switch network interface (eth0)
+auto eth0
+iface eth0 inet static
+        address 172.16.0.5
+        netmask 255.255.255.0
+        gateway 172.16.0.2
+        dns-nameservers 172.16.0.2
+```
+- Edit default dns resolver file: `sudo nano /etc/resolv.conf`
+```bash
+# Overwrite existing file ...
+search helplab.local
+nameserver 172.16.0.2
+
+# Ensure Kali can ping wazuh-server and DC
+ping -c 4 172.16.0.6
+ping -c 4 172.16.0.2
+
+# May need to edit DNS records on DC
+nslookup wazuh-server
+nslookup WIN-MEUJ3KPDEG5 # resolve DC hostname
+```
+
+---
+
+# Suricata Configuration on Ubuntu
+
+1. Verify Suricata Installation: `suricata -V`
+2. Check if rules downloaded: `ls -lh /var/lib/suricata/rules` (Should show 'suricata.rules')
+3. Configure Suricata for your Network
+```bash
+# Backup original config
+sudo cp /etc/suricata/suricata.yaml /etc/suricata/suricata.yaml.backup
+
+# Edit main configuration
+sudo nano /etc/suricata/suricata.yaml
+```
+- Modify these main sections:
+Define home network:
+```yaml
+vars:
+  address-groups:
+    HOME_NET: "[172.16.0.2/32]" # Ensure Kali host is external to more easily trigger alerts
+    EXTERNAL_NET: "!$HOME_NET"
+```
+Configure network interface (using AF_PACKET socket):
+```yaml
+af-packet:
+  - interface: eth0  # Your interface name
+    cluster-id: 99
+    cluster-type: cluster_flow
+    defrag: yes
+    use-mmap: yes
+    tpacket-v3: no # for VM stability
+```
+Enable EVE JSON logging (consolidates alerts, protocol data, and file info into single JSON file.):
+```yaml
+outputs:
+  - eve-log:
+      enabled: yes
+      filetype: regular
+      filename: eve.json
+      types:
+        - alert:
+            payload: yes
+            payload-buffer-size: 4kb
+            payload-printable: yes
+            packet: yes
+        - http:
+            extended: yes
+        - dns:
+            version: 2
+        - tls:
+            extended: yes
+        - files:
+            force-magic: no
+        - smtp:
+        - ssh
+        - flow
+```
+4. Enable Promiscuous Mode (network interface analyzes all network traffic instead of ignoring traffic not meant for it)
+```bash
+# Enable promiscuous mode on network interface
+sudo ip link set eth0 promisc on
+
+# Make it persistent (survives reboot)
+sudo nano /etc/network/interfaces # Add "post-up ip link set eth0 promisc on"
+
+# Create a new systemd service to keep promiscuous mode on
+sudo nano /etc/systemd/system/promisc-eth0.service
+```
+Add this content:
+```yaml
+[Unit]
+Description=Enable promiscuous mode on eth0 for Suricata
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/ip link set eth0 promisc on
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+```
+Enable and restart the service:
+```bash
+# Reload systemd to recognize new service
+sudo systemctl daemon-reload
+
+# Enable service to run at boot
+sudo systemctl enable promisc-eth0.service
+
+# Start it now
+sudo systemctl start promisc-eth0.service
+
+# Check status
+sudo systemctl status promisc-eth0.service
+
+# Verify promiscuous mode is enabled
+ip link show eth0
+# Should show PROMISC now
+```
+Ensure Hyper-V port mirroring is Enabled:
+```PowerShell
+# Check which VMs are set as Source/Destination
+Get-VM | Get-VMNetworkAdapter | Select-Object VMName, PortMirroringMode # DC should say src and Wazuh-server dest
+
+# 1. Set the Domain Controller to send traffic
+Set-VMNetworkAdapter -VMName "Your_DC_Name" -PortMirroring Source
+
+# 2. Set the Wazuh Server to receive traffic
+Set-VMNetworkAdapter -VMName "wazuh-server" -PortMirroring Destination
+```
+5. Test Suricata Configuration
+```bash
+# Test configuration syntax
+sudo suricata -T -c /etc/suricata/suricata.yaml -v
+
+# Should end with:
+# "Configuration provided was successfully loaded. Exiting."
+```
+6. Start Suricata
+```bash
+# Start Suricata service
+sudo systemctl start suricata
+
+# Enable to start on boot
+sudo systemctl enable suricata
+
+# Check status
+sudo systemctl status suricata
+
+# Should show "active (running)"
+
+# Monitor Suricata in real-time
+sudo tail -f /var/log/suricata/suricata.log
+```
+7. Verify Suricata is capturing traffic
+```bash
+# Watch for network logs in real-time
+sudo tail -f /var/log/suricata/eve.json
+# or
+sudo tail -f /var/log/suricata/eve.json | jq 'select(.event_type=="alert") | {time: .timestamp, alert: .alert.signature, severity: .alert.severity, src: .src_ip, dest: .dest_ip, dest_port: .dest_port}' # for alerts
+# Generate test traffic from Kali to trigger alerts
+# Open another terminal on Kali and run:
+# nmap 172.16.0.2
+
+# You should see JSON events appearing
+```
+8. Configure Wazuh to ingest Suricata Alerts
+```bash
+# Edit Wazuh manager configuration on Ubuntu
+sudo nano /var/ossec/etc/ossec.conf
+```
+Find the `ossec_config` section and add this before the closing tag:
+```xml
+<!-- Suricata integration -->
+  <localfile>
+    <log_format>json</log_format>
+    <location>/var/log/suricata/eve.json</location>
+  </localfile>
+```
+Save and Exit
+```bash
+# Restart Wazuh agent to apply changes
+sudo systemctl restart wazuh-manager
+
+# Check Wazuh agent status
+sudo systemctl status wazuh-manager
+```
