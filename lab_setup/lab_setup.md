@@ -1,3 +1,10 @@
+# Build Domain Controller VM:
+[Click here to jump to Active Directory lab Setup](https://github.com/MatthewNunezzz/Active-Directory-Homelab/blob/main/README.md#installation--configuration)
+
+*Note: Currently missing Windows Server VM Setup.* 
+*Jumps straight to installing and configuring Active Directory Domain Services*
+
+
 # Build Wazuh Server VM:
 
 ## Download Ubuntu Server
@@ -411,6 +418,48 @@ sudo systemctl status wazuh-manager
 9. Check Suricata Alerts in Wazuh Dashboard:
 - In dashboard search for: `rule.groups:suricata` or `data.event_type:alert`
 - You should start seeing Suricata alerts integrated with Wazuh
+
+---
+
+# Install Sysmon on Windows Server + Integrate w/ Wazuh Agent:
+
+### Download Sysmon files on Host machine:
+1. For sysmon, navigate to https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon.
+2. For industry standard sysmon configuration, install .xml file at https://github.com/SwiftOnSecurity/sysmon-config/blob/master/sysmonconfig-export.xml.
+3. Unzip sysmon files
+4. Copy/paste unzipped sysmon folder + sysmonconfig-export.xml to Windows Server VM.
+
+### Install Sysmon on Windows Server:
+1. To install sysmon using this specific configuration file open Powershell as Administrator on Windows Server, navigate to sysmon folder, and run:
+```powershell
+ .\Sysmon64.exe -accepteula -i C:\<file-path>\sysmonconfig-export.xml
+```
+2. To ensure sysmon is successfully running, run: `Get-Service Sysmon64`
+3. To ensure sysmon is logging events, run: `Get-WinEvent -LogName "Microsoft-Windows-Sysmon/Operational" -MaxEvents 10`
+
+### Integrate with Wazuh Agent:
+1. Open wazuh agent configuration file:
+  ```powershell
+  # Open configuration file from powershell
+  notepad "C:\Program Files (x86)\ossec-agent\ossec.conf"
+  ```
+  Add this:
+  ```xml
+  <!-- Sysmon Event Collection -->
+  <localfile>
+    <location>Microsoft-Windows-Sysmon/Operational</location>
+    <log_format>eventchannel</log_format>
+  </localfile>
+  ```
+2. Save and restart wazuh agent:
+  ```powershell
+  Restart-Service WazuhSvc
+  ```
+3. Verify Sysmon Events in Wazuh
+- Go to Threat Hunting -> Events
+- Filter for Windows Server agent
+- Search: `data.win.system.channel: "Microsoft-Windows-Sysmon/Operational"`
+- Verify that sysmon events are flowing
 
 ---
 
