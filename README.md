@@ -2,7 +2,7 @@
 
 ## Table of Contents
 - [Project Overview](#project-overview)
-- [Logical Architecture](#logical-architecture)
+- [Homelab Architecture](#homelab-architecture)
 - [Defensive Stack & Telemetry](#defensive-stack--telemetry)
 - [Attack & Detection Scenarios](#attack--detection-scenarios)
 - [Vulnerability Scan with Nessus](#vulnerability-scanning-with-nessus)
