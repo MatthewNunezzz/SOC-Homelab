@@ -186,6 +186,7 @@ sudo apt install -y \
   evil-winrm \
   impacket-scripts \
   enum4linux \
+  enum4linux-ng \
   smbclient \
   hydra \
   metasploit-framework \
@@ -218,11 +219,19 @@ iface eth0 inet static
         gateway 172.16.0.2
         dns-nameservers 172.16.0.2
 ```
+to switch back to default switch: (necessary for additional installations)
+```bash
+auto eth0
+iface eth0 inet dhcp
+```
 - Edit default dns resolver file: `sudo nano /etc/resolv.conf`
 ```bash
 # Overwrite existing file ...
 search helplab.local
 nameserver 172.16.0.2
+
+# Restart networking service
+sudo systemctl restart networking
 
 # Ensure Kali can ping wazuh-server and DC
 ping -c 4 172.16.0.6

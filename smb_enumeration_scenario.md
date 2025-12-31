@@ -1,4 +1,4 @@
-# SMB Enumeration
+# SMB Enumeration & Data Exfiltration
 
 ## Table of Contents
 - [Scenario Overiew](#i-scenario-overview)
@@ -9,19 +9,30 @@
 
 ## I. Scenario Overview:
 
-**Objective:** 
+**Objective:** Using valid SMB credentials, enumerate network shares hosted on the Windows Server (172.16.0.2), identify sensitive or accessible data, and exfiltrate selected files to an unauthorized system within the segmented private network.
 
 **MITRE ATT&CK Mapping:**
-- Tactic: 
-- Technique: 
-    - Sub-technique: 
+- Tactics: 
+    - Discovery (TA0007)
+    - Exfiltration (TA0010)
+- Techniques: 
+    - Network Share Discovery (T1135)
+    - Exfiltration Over Alternative Protocol (T1048)
 
 ## II. Attack Phase:
+
+- use smbmap to enumerate network shares
+- use smbmap to list finance share contents
+- use smbmap to download balance sheet file
 
 ### Step 1: 
 
 
 ## III. Detection Phase:
+
+- Windows Security logs: remote logon, Excessive SMB Share Enumeration ALERT
+- Suricata: SMB traffic to External Host ALERT
+- Wireshark: Confirm that Enumeration + Exfiltration occurred, how much data was transferred?
 
 ### NIST CSF Function: Detect (DE)
 
@@ -30,6 +41,7 @@ Category: DE.[] — []
      - Mapping: []
 
 ### Step 1:
+
 In Wazuh Dashboard ...
 - Filter for `agent.name: WIN-MEUJ3KPDEG5` (Windows Server agent)
 - Filter for `data.win.system.channel: Security` (Security Event Logs)
@@ -64,7 +76,21 @@ In Wazuh Dashboard ...
 
 ### Step 3: Network Traffic Analysis (Wireshark)
 
+
 ## IV. Incident Response Phase:
+
+Immediate Actions:
+- Temporarily Lock Administrator Account
+- Reset Administrator Password
+- Block attacker source IP using host-based firewall rules on the Domain Controller/file server
+
+Scope & Impact Analysis:
+- Investigate File Server Audit logs to see:
+    - Which shares were accessed? 
+    - Which files were read or copied? 
+
+Notification & Escalation:
+- Escalate incident to Finance department
 
 ### NIST CSF Function: Response (RS)
 
@@ -81,6 +107,9 @@ Step 1:
 Step 2: 
 
 ## V. Corrective Measures Phase:
+
+- Enforce stronger authentication policies for privileged accounts.
+- Restrict SMB access to authorized domain-joined devices.
 
 ### NIST CSF Function: Protect (PR)
 

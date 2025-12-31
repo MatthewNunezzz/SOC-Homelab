@@ -85,7 +85,7 @@ We observe that the attacker machine (172.16.0.5) sent a ping request to the pri
 
 ### Step 3: Network Traffic Analysis (Wireshark)
 
-Calculate the precise login attempt rate with Wireshark.
+Calculate the login attempt rate with Wireshark.
 
 - **Step 1:** Capture packets during attack
 (In Kali terminal):
@@ -123,7 +123,7 @@ Category: RS.MI — Incident Mitigation
 
 Step 1: Temporarily Lock Administrator Account
 
-Step 2: Reset Administrator Account
+Step 2: Reset Administrator Account Password
 
 ## V. Corrective Measures Phase:
 

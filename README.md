@@ -1,4 +1,4 @@
-# SOC-Homelab
+# SOC Homelab
 
 ## Table of Contents
 - [Project Overview](#project-overview)
@@ -13,10 +13,17 @@
 ## Project Overview
 
 ### Description
-This homelab project demonstrates the design and implementation of an SOC environment ...
+This homelab project demonstrates the design and implementation of a comprehensive Security Operations Center (SOC) environment, focusing on the integration of endpoint and network-level telemetry to defend a [Windows Active Directory infrastructure](https://github.com/MatthewNunezzz/Active-Directory-Homelab/blob/main). This project simulates real-world cyber-attack scenarios and documents the full life-cycle of detection and response.
 
 ### Key Objectives
-- 
+- Architect a Multi-Layered Defensive Stack
+- Simulate Adversary Tactics & Techniques
+- Develop High-Fidelity Detections
+- Perform Deep Packet Analysis
+- Apply Threat Modeling with MITRE ATT&CK framework
+- Apply NIST CSF Control Mappings
+- Document Professional Incident Reports
+- Implement Vulnerability Management
 
 ---
 
@@ -106,31 +113,24 @@ To maintain high-signal monitoring and system performance, the dashboard is conf
 **MITRE ATT&CK Mapping:**
 - Tactic: Credential Access (TA0006)
 - Technique: Brute Force (T1110)
-    - Sub-technique: Password Guessing (001)
+    - Sub-technique: Password Guessing (.001)
 
 [Click here to view detailed incident report](brute_force_scenario.md)
 
-### SMB Enumeration
+### SMB Enumeration & Data Exfiltration
 
-**Objective:** 
+**Objective:** Using valid SMB credentials, enumerate network shares hosted on the Windows Server (172.16.0.2), identify sensitive or accessible data, and exfiltrate selected files to an unauthorized system within the segmented private network.
 
 **MITRE ATT&CK Mapping:**
-- Tactic: 
-- Technique: 
-    - Sub-technique: 
+- Tactics: 
+    - Discovery (TA0007)
+    - Exfiltration (TA0010)
+- Techniques: 
+    - Network Share Discovery (T1135)
+    - Exfiltration Over Alternative Protocol (T1048)
+
 
 [Click here to view detailed incident report](smb_enumeration_scenario.md)
-
-### Malware Execution
-
-**Objective:** 
-
-**MITRE ATT&CK Mapping:**
-- Tactic: 
-- Technique: 
-    - Sub-technique: 
-
-[Click here to view detailed incident report](malware_execution_scenario.md)
 
 ---
 
@@ -153,7 +153,19 @@ A basic network scan was performed on the Domain Controller (Windows Server 2022
 ## Lessons Learned
 
 ### Technical Skills Gained
-- 
+
+| Category | Technical Skill | Tool / Technology Used |
+| --- | --- | --- |
+| **Framework Mapping** | Preventative, Detective, and Responsive control categorization. | **NIST Cybersecurity Framework (CSF)** |
+| **SIEM & Visualization** | Centralized log management and security telemetry correlation. | **Wazuh (Manager, Indexer, Dashboard)** |
+| **Network Forensics** | Deep packet analysis and attack velocity calculation. | **Wireshark, tcpdump** |
+| **Endpoint Monitoring** | High-fidelity process and network connection logging. | **Sysmon (SwiftOnSecurity Config)** |
+| **Network Security** | Signature-based NIDS and Deep Packet Inspection (DPI). | **Suricata** |
+| **Offensive Security** | Adversary emulation and credential access simulation. | **Kali Linux (NetExec, smbmap)** |
+| **Threat Modeling** | Mapping adversary tactics to defensive detections. | **MITRE ATT&CK Framework** |
+| **Risk Assessment** | Identifying system vulnerabilities and unpatched software. | **Nessus** |
+| **Virtualization** | Architecting segmented private networks and resource management. | **Microsoft Hyper-V** |
+| **Systems Admin** | Active Directory administration and security log auditing. | **Windows Server 2022** |
 
 ### Challenges Encountered
 - Installing additional software on VMs in a private network
