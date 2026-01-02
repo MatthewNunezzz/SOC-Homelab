@@ -155,6 +155,51 @@ Check logs are flowing:
 2. Click Security events tab
 3. You should start seeing Windows Event logs appearing
 
+## Creating SMB Enumeration Detection Rule
+1. On Domain controller enable detailed file share auditing
+  - Open Group Policy Management
+  - Edit the Default Domain Controllers Policy.
+  - Navigate to: Computer Configuration > Policies > Windows Settings > Security Settings > Advanced Audit Policy Configuration > System Audit Policies - Local Group Policy Object > Object Access
+  - Find Audit Detailed File Share and set it to Success and Failure.
+  - Open a command prompt as Administrator and run gpupdate /force.
+
+2. Ensure that Wazuh Agent is forwarding Event 5145 logs
+  - Open `C:\Program Files (x86)\ossec-agent\ossec.conf`
+  - Ensure that file contains:
+    ```xml
+    # delete any rules that filter out event 5145 logs
+    <localfile>
+      <location>Security</location>
+      <log_format>eventlog</log_format>
+    </localfile>
+    ```
+
+3. On Wazuh-server add detection rule to `/var/ossec/etc/rules/local_rules.xml`:
+```bash
+# Create child rule that triggers on single smb share discovery
+<group name="windows,smb_discovery,">
+  <rule id="100005" level="3">
+    <if_sid>60103</if_sid>
+    <field name="win.system.eventID">^5145$</field>
+    <description>SMB Share Accessed: $(win.eventdata.shareName) by $(win.eventdata.subjectUserName)</description>
+  </rule>
+
+# Add in parent rule that triggers if child rule fires 5 times in 30 seconds
+  <rule id="100006" level="12" frequency="10" timeframe="30">
+    <if_matched_sid>100005</if_matched_sid>
+    <same_field>win.eventdata.ipAddress</same_field>
+    <description>Possible SMB Enumeration: Excessive share access attempts $(win.eventdata.ipAddress)</description>
+    <mitre>
+      <id>T1135</id>
+    </mitre>
+  </rule>
+</group>
+```
+4. Restart Wazuh Manager: `sudo systemctl restart wazuh-manager`
+5. Test configuration: `sudo /var/ossec/bin/wazuh-analysisd -t`
+6. Run the attack: `smbmap -H 172.16.0.2 -u Administrator -p 'password1234'`
+7. Check Dashboard for alert: 100006
+
 ---
 
 # Build Kali Linux (Attacker) VM
@@ -349,7 +394,7 @@ Ensure Hyper-V port mirroring is Enabled:
 Get-VM | Get-VMNetworkAdapter | Select-Object VMName, PortMirroringMode # DC should say src and Wazuh-server dest
 
 # 1. Set the Domain Controller to send traffic
-Set-VMNetworkAdapter -VMName "Your_DC_Name" -PortMirroring Source
+Set-VMNetworkAdapter -VMName "Helplab-DC" -PortMirroring Source
 
 # 2. Set the Wazuh Server to receive traffic
 Set-VMNetworkAdapter -VMName "wazuh-server" -PortMirroring Destination
@@ -417,7 +462,25 @@ Run `sudo nano /var/ossec/etc/rules/local_rules.xml` and add to it:
 </group>
 ```
 Save and Exit
+
+Create data exfiltration suricata detection rule:
+Add this to your `/etc/suricata/rules/local.rules`:
 ```bash
+alert tcp $HOME_NET 445 -> $EXTERNAL_NET any (msg:"Data Exfiltration - Large Transfer from SMB Port"; flow:established,to_client; threshold:type limit, track by_src, count 1, seconds 60; stream_size:server,>,50000; classtype:policy-violation; sid:1000020; rev:1;)
+# '$HOME_NET -> $EXTERNAL_NET': This explicitly monitors traffic leaving your protected zone
+# 'flow:established,to_client': This triggers when the Kali machine makes the initial request to the file server.
+# 'threshold:type limit, track by_src, count 1, seconds 60;': suppresses alerts within 60 seconds of the most previous one.
+# 'stream_size:server,>,50000': The Data Exfiltration logic. It only alerts if the total data transferred from server exceeds 50 KB. 
+# 'classtype:policy-violation': categorizes alert as Priority 1 (High) or Priority 2 (Medium)
+# 'sid:1000020': signature id (1,000,000+: Reserved for Local/Custom rules)
+# 'rev:1': revision number 
+```
+Save and Exit
+
+```bash
+# Load the Suricata rule
+sudo systemctl restart suricata
+
 # Restart Wazuh agent to apply changes
 sudo systemctl restart wazuh-manager
 

@@ -21,61 +21,84 @@
 
 ## II. Attack Phase:
 
-- use smbmap to enumerate network shares
-- use smbmap to list finance share contents
-- use smbmap to download balance sheet file
+### Step 1: Ensure SMB service is open on target (172.16.0.2)
+```bash
+# Ensure target is reachable
+ping -c 4 172.16.0.2
 
-### Step 1: 
+# Check if file-sharing service (445) is open
+nmap -p 445 172.16.0.2
+```
 
+### Step 2: Enumerate network shares using `smbmap`
+```bash
+smbmap -H 172.16.0.2 -u Administrator -p 'password1234'  
+# - -H: Specify target host IP
+# - -u: Specify account username
+# - -p: Specify account password 
+```
+![](screenshots/enum_exfil_01.png)
+
+### Step 3: View contents of Finance share
+```bash
+smbmap -H 172.16.0.2 -u Administrator -p 'password1234' -r 'Finance'
+# - -r: Specify share to open
+```
+![](screenshots/enum_exfil_02.png)
+
+### Step 4: Locally download all files stored in Finance share
+```bash
+smbmap -H 172.16.0.2 -u Administrator -p 'password1234' -r Finance -A '.*'
+# - -A: Specify which files to download
+```
+![](screenshots/enum_exfil_025.png)
 
 ## III. Detection Phase:
 
-- Windows Security logs: remote logon, Excessive SMB Share Enumeration ALERT
-- Suricata: SMB traffic to External Host ALERT
-- Wireshark: Confirm that Enumeration + Exfiltration occurred, how much data was transferred?
-
 ### NIST CSF Function: Detect (DE)
 
-Category: DE.[] — []
-- DE.[]-[]: []
-     - Mapping: []
+Category: DE.CM — Continuous Monitoring
+- DE.CM-09: Computing hardware and software, runtime environments, and their data are monitored to find potentially adverse events
+     - Mapping: Monitor file sharing services to detect enumeration and exfiltration.
 
-### Step 1:
+### Step 1: Analyze Windows Security Events
 
 In Wazuh Dashboard ...
 - Filter for `agent.name: WIN-MEUJ3KPDEG5` (Windows Server agent)
 - Filter for `data.win.system.channel: Security` (Security Event Logs)
-- Select Timeslot: 
+- Select Timeslot: `Jan 2, 2026 @ 01:23:00.000` -> `Jan 2, 2026 @ 01:26:00.000`
 
-![](screenshots/.png)
+![](screenshots/enum_exfil_03.png)
 
 
 ### Security Event summary:
 | rule.description | hit count | rule.id |data.win.eventdata.ipAddress | agent.ip |
 | --- | --- | --- | --- | --- |
-| Logon Failure - Unknown user or bad password | 13K+ | 60122 | 172.16.0.5 | 172.16.0.2 |
-| Multiple Windows Logon Failures | 2K+ |  60204 |172.16.0.5 | 172.16.0.2 |
-| Successful Remote Logon Detected - User:\Administrator ... | 1 | 92652 | 172.16.0.5 | 172.16.0.2 |
+| SMB Share Accessed: ... by Administrator | 79 | 100005 | 172.16.0.5 | 172.16.0.2 |
+| Possible SMB Enumeration: ... | 24 |  100006 |172.16.0.5 | 172.16.0.2 |
+| Windows audit failure event | 3 | 60104 | 172.16.0.5 | 172.16.0.2 |
 
-
+We observe that some machine (172.16.0.5) logged in as Administrator accessed a large number of network shares across different departments within the span of 3 minutes triggering multiple "Possible SMB Enumeration" alerts.
 
 ### Step 2: Analyze Suricata Logs
 In Wazuh Dashboard ...
-- Filter for ...
-- Select Timeslot: 
+- Filter for `rule.groups:suricata` (network logs)
+- Select Timeslot: `Jan 2, 2026 @ 01:23:00.000` -> `Jan 2, 2026 @ 01:26:00.000`
 
-![](screenshots/.png)
+![](screenshots/enum_exfil_04.png)
 
 ### Network log summary:
-| rule.description | hit count | data.src_ip | data.dest_ip | data.dest_port |
+| rule.description | hit count | data.src_ip | data.dest_ip | data.flow.bytes_toclient |
 | --- | --- | --- | --- | --- |
-| Suricata: Alert - GPL ICMP PING *NIX | 4 | 172.16.0.5 | 172.16.0.2 | N/A |
-| Suricata: Alert - SURICATA STREAM ... | 128 | 172.16.0.5 | 172.16.0.2 | 445 |
+| Suricata: Alert - GPL ICMP PING *NIX | 4 | 172.16.0.5 | 172.16.0.2 | 294 |
+| Suricata: Alert - Data Exfiltration - Large Transfer from SMB Port  | 1 | 172.16.0.5 | 172.16.0.2 | 54946 |
 
-
+We observe that some machine (172.16.0.5) sent a ping request to the primary domain controller before transferring a sizeable amount data via the SMB Port. For the data exfiltration alert to be triggered, the machine's IP must appear as an "external" IP not being registered under the Suricata `HOME_NET`, along with having transferred greater than 50 KB. Combined with the fact that this detection was triggered by the same device/account having triggered an SMB enumeration alert shortly before, a data exfiltration attempt appears likely and warrants further investigation.
 
 ### Step 3: Network Traffic Analysis (Wireshark)
 
+- How quickly were file shares enumerated?
+- How much data was transferred?
 
 ## IV. Incident Response Phase:
 

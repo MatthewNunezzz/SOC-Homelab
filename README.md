@@ -168,9 +168,10 @@ A basic network scan was performed on the Domain Controller (Windows Server 2022
 | **Systems Admin** | Active Directory administration and security log auditing. | **Windows Server 2022** |
 
 ### Challenges Encountered
-- Installing additional software on VMs in a private network
+- Installing updates on VMs in a private network
 - Designing Homelab with 16 GB RAM constraints
 - Struggled to configure Suricata to feed logs into Wazuh SIEM
+- Troubleshot custom detections not firing despite sound rule logic
 
 ### Future Improvements
 - Boosting VM performance with additional RAM

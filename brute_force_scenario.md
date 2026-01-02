@@ -47,14 +47,14 @@ netexec smb 172.16.0.2 -u Administrator -p /usr/share/wordlists/rockyou.txt --ig
 ### NIST CSF Function: Detect (DE)
 
 Category: DE.CM — Continuous Monitoring
-- DE.CM-01: Networks and network services are monitored to find potentially adverse events
-     - Mapping: Monitoring file-sharing services for brute force attacks.
+- DE.CM-09: Computing hardware and software, runtime environments, and their data are monitored to find potentially adverse events
+     - Mapping: Monitor authentication attempts to identify attacks against credentials.
 
 ### Step 1: Analyze Windows Security Events
 In Wazuh Dashboard ...
 - Filter for `agent.name: WIN-MEUJ3KPDEG5` (Windows Server agent)
 - Filter for `data.win.system.channel: Security` (Security Event Logs)
-- Select Timeslot: 17:09:00 - 17:16:00
+- Select Timeslot: `Dec 31, 2025 @ 17:09:00` -> `Dec 31, 2025 @ 17:16:00`
 
 ![](screenshots/brute_force_02.png)
 
@@ -71,7 +71,7 @@ We observe that some machine (172.16.0.5) within our network made greater than 1
 ### Step 2: Analyze Suricata Logs
 In Wazuh Dashboard ...
 - Filter for `rule.groups:suricata` (network logs)
-- Select Timeslot: 17:09:00 - 17:16:00
+- Select Timeslot: `Dec 31, 2025 @ 17:09:00` -> `Dec 31, 2025 @ 17:16:00`
 
 ![](screenshots/brute_force_03.png)
 
