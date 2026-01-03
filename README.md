@@ -16,14 +16,14 @@
 This homelab project demonstrates the design and implementation of a comprehensive Security Operations Center (SOC) environment, focusing on the integration of endpoint and network-level telemetry to defend a [Windows Active Directory infrastructure](https://github.com/MatthewNunezzz/Active-Directory-Homelab/blob/main). This project simulates real-world cyber-attack scenarios and documents the full life-cycle of detection and response.
 
 ### Key Objectives
-- Architect a Multi-Layered Defensive Stack
+- Architect a Multi-Layered Defensive Stack using Wazuh & Suricata
 - Simulate Adversary Tactics & Techniques
 - Develop High-Fidelity Detections
-- Perform Deep Packet Analysis
+- Perform Deep Packet Analysis with Wireshark
 - Apply Threat Modeling with MITRE ATT&CK framework
 - Apply NIST CSF Control Mappings
 - Document Professional Incident Reports
-- Implement Vulnerability Management
+- Implement Vulnerability Management with Nessus
 
 ---
 
