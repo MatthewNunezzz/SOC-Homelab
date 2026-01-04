@@ -184,7 +184,7 @@ Check logs are flowing:
     <description>SMB Share Accessed: $(win.eventdata.shareName) by $(win.eventdata.subjectUserName)</description>
   </rule>
 
-# Add in parent rule that triggers if child rule fires 5 times in 30 seconds
+# Add in parent rule that triggers if child rule fires 10 times in 30 seconds
   <rule id="100006" level="12" frequency="10" timeframe="30">
     <if_matched_sid>100005</if_matched_sid>
     <same_field>win.eventdata.ipAddress</same_field>
